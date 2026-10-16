@@ -1,0 +1,6 @@
+status: off
+opponent: 
+home: yes
+us: 0
+them: 0
+minute: 
