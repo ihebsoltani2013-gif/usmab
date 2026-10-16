@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#000000">
+<title>لوحة تحكم USMAB</title>
+<style>
+:root{--bg:#fff;--ink:#000;--panel:#efeeee;--mute:#6d6d6d;--onink:#fff;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#000;--ink:#fff;--panel:#161616;--mute:#9a9a9a;--onink:#000;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 system-ui,"Segoe UI",Tahoma,Arial,sans-serif;padding-bottom:48px}
+header{background:var(--ink);color:var(--onink);padding:16px;font-weight:800;font-size:22px}
+main{max-width:560px;margin:0 auto;padding:16px}
+h2{font-size:21px;margin:18px 0 8px}
+label{font-weight:700;font-size:15px}
+input,textarea,select{width:100%;font:inherit;padding:11px;border:2px solid var(--ink);background:var(--bg);color:var(--ink);margin:4px 0 12px;border-radius:0}
+button{font:inherit;font-weight:700;padding:13px 16px;border:2px solid var(--ink);background:var(--ink);color:var(--onink);cursor:pointer}
+button.alt{background:var(--bg);color:var(--ink)}
+button:disabled{opacity:.5}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.tabs{display:flex;margin:0 0 14px;border:2px solid var(--ink)}.tabs button{flex:1;border:0}
+.card{background:var(--panel);padding:12px;margin:10px 0}
+.card b{display:block}.card small{color:var(--mute)}
+.msg{margin:10px 0;font-weight:700}.err{color:#c0281f}
+ol{padding-inline-start:22px}code{direction:ltr;unicode-bidi:isolate;background:var(--panel);padding:1px 5px}
+a{color:inherit}[hidden]{display:none!important}
+</style></head><body>
+<header>لوحة تحكم الاتحاد</header>
+<main>
+<section id="setup" hidden>
+<h2>الإعداد (مرة واحدة فقط)</h2>
+<p>لكي تنشر الأخبار من هنا نحتاج مفتاح وصول من GitHub يسمح بتعديل ملفات مشروع الفريق فقط.</p>
+<ol>
+<li>افتح <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">صفحة إنشاء المفتاح</a>.</li>
+<li>الاسم: <code>usmab</code> والمدة: سنة.</li>
+<li>Repository access ← <code>Only select repositories</code> ← اختر <code>usmab</code>.</li>
+<li>Permissions ← Repository permissions ← <code>Contents</code> ← <code>Read and write</code>.</li>
+<li>اضغط Generate token، انسخ المفتاح والصقه هنا:</li>
+</ol>
+<input id="tok" type="password" dir="ltr" placeholder="github_pat_..." autocomplete="off">
+<button id="saveTok">حفظ المفتاح</button>
+<p class="msg" id="setMsg"></p>
+<p><small>يُحفظ المفتاح في هذا الهاتف فقط. لا تشاركه مع أحد.</small></p>
+</section>
+
+<section id="panel" hidden>
+<div class="tabs"><button id="tN">الأخبار</button><button id="tL" class="alt">النتيجة المباشرة</button></div>
+
+<div id="pN">
+<h2 id="fT">خبر جديد</h2>
+<label>التصنيف (كلمة قصيرة)</label><input id="fl" placeholder="مثال: Matchday أو انتدابات">
+<label>العنوان</label><input id="fh">
+<label>النص (كل سطر جديد يصبح فقرة)</label><textarea id="fb" rows="6"></textarea>
+<label>صورة (اختياري)</label><input id="ff" type="file" accept="image/*">
+<label>التاريخ</label><input id="fd" type="date">
+<div class="row"><button id="pub">نشر الخبر</button><button id="cancel" class="alt" hidden>إلغاء</button></div>
+<p class="msg" id="pm"></p>
+<h2>الأخبار المنشورة</h2>
+<div id="list"></div>
+</div>
+
+<div id="pL" hidden>
+<h2>النتيجة المباشرة</h2>
+<p id="lstat" class="msg"></p>
+<label>الفريق المنافس</label><input id="lo">
+<label>مكان المباراة</label><select id="lh"><option value="yes">داخل الديار</option><option value="no">خارج الديار</option></select>
+<div class="row"><div><label>نتيجة الاتحاد</label><input id="lu" type="number" min="0" value="0"></div><div><label>نتيجة الخصم</label><input id="lt" type="number" min="0" value="0"></div></div>
+<label>الوقت أو الحالة</label><input id="lmin" placeholder="مثال: 35' أو الاستراحة">
+<div class="row"><button id="lgo">تحديث النتيجة (مباشر)</button><button id="loff" class="alt">إنهاء البث</button></div>
+<p class="msg" id="lmsg"></p>
+</div>
+
+<p style="margin-top:30px"><button id="logout" class="alt">تسجيل الخروج</button></p>
+</section>
+</main>
+<script>
+const OWNER="ihebsoltani2013-gif",REPO="usmab",API="https://api.github.com/repos/"+OWNER+"/"+REPO+"/contents/";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const HEAD="# USMAB news. Newest post first. Managed from admin.html\n\n";
+const parse=t=>t.split(/^[ \t]*---[ \t]*$/m).map(b=>{const o={};let k=null;b.trim().split(/\r?\n/).forEach(l=>{const m=l.match(/^(label|title|text|image|date):[ \t]*(.*)$/i);if(m){k=m[1].toLowerCase();o[k]=m[2].trim()}else if(k&&l.trim())o[k]+="\n"+l.trim()});return o}).filter(o=>o.title);
+const ser=ps=>HEAD+ps.map(o=>"label: "+(o.label||"News")+"\ntitle: "+o.title+"\ntext: "+(o.text||"").trim()+"\nimage: "+(o.image||"")+"\ndate: "+(o.date||"")).join("\n---\n")+"\n";
+const dec=b=>new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\s/g,"")),c=>c.charCodeAt(0)));
+const b64=u8=>{let s="";u8.forEach(c=>s+=String.fromCharCode(c));return btoa(s)};
+const enc=t=>b64(new TextEncoder().encode(t));
+let tok="",posts=[],sha=null,lsha=null,edit=-1;
+try{tok=localStorage.getItem("usmab_tok")||""}catch(e){}
+const msg=(id,t,bad)=>{const e=$(id);e.textContent=t;e.className="msg"+(bad?" err":"")};
+async function gh(path,opt={}){
+  const r=await fetch(API+path,{...opt,cache:"no-store",headers:{Authorization:"Bearer "+tok,Accept:"application/vnd.github+json","Content-Type":"application/json"}});
+  const get=!opt.method||opt.method=="GET";
+  if(r.status==404&&get)return null;
+  if(!r.ok)throw new Error(r.status==401?"المفتاح غير صالح أو منتهي":r.status==403?"المفتاح لا يملك صلاحية الكتابة":r.status==404?"لم أجد المشروع، تأكد من اختيار usmab":r.status==409||r.status==422?"تعارض أثناء الحفظ، أعد فتح الصفحة وحاول مجددا":"خطأ "+r.status);
+  return r.json();
+}
+const run=async(fn,out)=>{try{await fn()}catch(x){msg(out,x.message||"حدث خطأ",1);try{await loadNews();render()}catch(e){}}};
+async function loadNews(){const r=await gh("news.txt");if(r){sha=r.sha;posts=parse(dec(r.content))}else{sha=null;posts=[]}}
+async function change(fn,m){fn();const r=await gh("news.txt",{method:"PUT",body:JSON.stringify({message:m,content:enc(ser(posts)),...(sha?{sha}:{})})});sha=r.content.sha}
+function render(){$("list").innerHTML=posts.map((p,i)=>'<div class="card"><b>'+esc(p.title)+'</b><small>'+esc(p.label||"")+' '+esc(p.date||"")+'</small><div class="row" style="margin-top:8px"><button class="alt" data-e="'+i+'">تعديل</button><button class="alt" data-d="'+i+'">حذف</button></div></div>').join("")||"<p>لا توجد أخبار بعد.</p>"}
+function reset(){edit=-1;["fl","fh","fb","ff"].forEach(i=>$(i).value="");$("fT").textContent="خبر جديد";$("pub").textContent="نشر الخبر";$("cancel").hidden=true}
+const shrink=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const w=Math.min(900,im.width),c=document.createElement("canvas");c.width=w;c.height=Math.round(im.height*w/im.width);c.getContext("2d").drawImage(im,0,0,c.width,c.height);c.toBlob(x=>x?ok(x):no(new Error("الصورة غير صالحة")),"image/jpeg",.82)};im.onerror=()=>no(new Error("الصورة غير صالحة"));im.src=r.result};r.onerror=()=>no(new Error("الصورة غير صالحة"));r.readAsDataURL(f)});
+async function upImg(f){const u8=new Uint8Array(await(await shrink(f)).arrayBuffer());const name="photos/"+Date.now()+".jpg";await gh(name,{method:"PUT",body:JSON.stringify({message:"Add photo",content:b64(u8)})});return name}
+$("pub").onclick=()=>run(async()=>{
+  const h=$("fh").value.trim();if(!h){msg("pm","اكتب عنوان الخبر أولا",1);return}
+  $("pub").disabled=true;msg("pm","جار النشر...");
+  let img=edit>=0?(posts[edit].image||""):"";const f=$("ff").files[0];if(f)img=await upImg(f);
+  const p={label:$("fl").value.trim()||"News",title:h,text:$("fb").value.trim(),image:img,date:$("fd").value};
+  const was=edit>=0;
+  await change(()=>{if(was)posts[edit]=p;else posts.unshift(p)},was?"Edit news":"Add news");
+  reset();render();msg("pm","تم النشر ✓ سيظهر في التطبيق بعد دقيقة أو دقيقتين.");
+},"pm").finally(()=>{$("pub").disabled=false});
+$("cancel").onclick=reset;
+$("list").onclick=e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.e!=null){edit=+b.dataset.e;const p=posts[edit];$("fl").value=p.label||"";$("fh").value=p.title;$("fb").value=p.text||"";$("fd").value=p.date||"";$("fT").textContent="تعديل الخبر";$("pub").textContent="حفظ التعديل";$("cancel").hidden=false;scrollTo(0,0)}
+  else if(b.dataset.d!=null){if(!b.dataset.s){b.dataset.s=1;b.textContent="اضغط مرة أخرى للحذف";return}
+    run(async()=>{msg("pm","جار الحذف...");await change(()=>{posts.splice(+b.dataset.d,1)},"Delete news");reset();render();msg("pm","تم الحذف ✓")},"pm")}};
+async function loadLive(){const r=await gh("live.txt");lsha=r?r.sha:null;const o={};if(r)dec(r.content).split(/\r?\n/).forEach(l=>{const m=l.match(/^(\w+):\s*(.*)$/);if(m)o[m[1].toLowerCase()]=m[2].trim()});
+  $("lo").value=o.opponent||"";$("lh").value=o.home=="no"?"no":"yes";$("lu").value=o.us||0;$("lt").value=o.them||0;$("lmin").value=o.minute||"";$("lstat").textContent=o.status=="live"?"البث المباشر: يعمل الآن":"البث المباشر: متوقف"}
+async function putLive(st){const t=["status: "+st,"opponent: "+$("lo").value.trim(),"home: "+$("lh").value,"us: "+($("lu").value||0),"them: "+($("lt").value||0),"minute: "+$("lmin").value.trim()].join("\n")+"\n";
+  const r=await gh("live.txt",{method:"PUT",body:JSON.stringify({message:"Live score",content:enc(t),...(lsha?{sha:lsha}:{})})});lsha=r.content.sha;$("lstat").textContent=st=="live"?"البث المباشر: يعمل الآن":"البث المباشر: متوقف"}
+$("lgo").onclick=()=>run(async()=>{if(!$("lo").value.trim()){msg("lmsg","اكتب اسم الفريق المنافس",1);return}msg("lmsg","جار التحديث...");await putLive("live");msg("lmsg","تم التحديث ✓ يظهر في التطبيق خلال دقيقة تقريبا.")},"lmsg");
+$("loff").onclick=()=>run(async()=>{msg("lmsg","جار الإنهاء...");await putLive("off");msg("lmsg","تم إنهاء البث ✓")},"lmsg");
+const tab=n=>{$("pN").hidden=!!n;$("pL").hidden=!n;$("tN").className=n?"alt":"";$("tL").className=n?"":"alt"};
+$("tN").onclick=()=>tab(0);$("tL").onclick=()=>tab(1);
+$("saveTok").onclick=()=>{const v=$("tok").value.trim();if(!v){msg("setMsg","الصق المفتاح أولا",1);return}tok=v;gh("news.txt").then(()=>{try{localStorage.setItem("usmab_tok",v)}catch(e){}show()}).catch(x=>{tok="";msg("setMsg",x.message,1)})};
+$("logout").onclick=()=>{try{localStorage.removeItem("usmab_tok")}catch(e){}tok="";location.reload()};
+function show(){$("setup").hidden=!!tok;$("panel").hidden=!tok;if(tok){$("fd").value=new Date().toISOString().slice(0,10);run(async()=>{await loadNews();render();await loadLive()},"pm")}}
+show();
+</script></body></html>
