@@ -1,4 +1,4 @@
-status: live
+status: off
 opponent: Ain arnat
 home: yes
 us: 3
