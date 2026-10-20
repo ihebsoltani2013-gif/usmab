@@ -3,4 +3,4 @@ opponent: Ain arnat
 home: yes
 us: 01
 them: 0
-minute: 
+minute: الاستراحة
