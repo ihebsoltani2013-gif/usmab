@@ -1,6 +1,6 @@
-status: off
-opponent: 
+status: live
+opponent: Ain arnat
 home: yes
-us: 0
+us: 01
 them: 0
 minute: 
