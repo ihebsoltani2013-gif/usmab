@@ -1,6 +1,6 @@
 status: live
 opponent: Ain arnat
 home: yes
-us: 01
-them: 0
-minute: الاستراحة
+us: 3
+them: 1
+minute: 73
