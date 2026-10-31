@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#000000">
+<title>لوحة تحكم USMAB</title>
+<style>
+:root{--bg:#fff;--ink:#000;--panel:#efeeee;--mute:#6d6d6d;--onink:#fff;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#000;--ink:#fff;--panel:#161616;--mute:#9a9a9a;--onink:#000;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 system-ui,"Segoe UI",Tahoma,Arial,sans-serif;padding-bottom:48px}
+header{background:var(--ink);color:var(--onink);padding:16px;font-weight:800;font-size:22px}
+main{max-width:560px;margin:0 auto;padding:16px}
+h2{font-size:21px;margin:18px 0 8px}
+label{font-weight:700;font-size:15px}
+input,textarea,select{width:100%;font:inherit;padding:11px;border:2px solid var(--ink);background:var(--bg);color:var(--ink);margin:4px 0 12px;border-radius:0}
+button{font:inherit;font-weight:700;padding:13px 16px;border:2px solid var(--ink);background:var(--ink);color:var(--onink);cursor:pointer}
+button.alt{background:var(--bg);color:var(--ink)}
+button:disabled{opacity:.5}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.tabs{display:flex;margin:0 0 14px;border:2px solid var(--ink)}.tabs button{flex:1;border:0}
+.card{background:var(--panel);padding:12px;margin:10px 0}
+.card b{display:block}.card small{color:var(--mute)}
+.msg{margin:10px 0;font-weight:700}.err{color:#c0281f}
+ol{padding-inline-start:22px}code{direction:ltr;unicode-bidi:isolate;background:var(--panel);padding:1px 5px}
+a{color:inherit}[hidden]{display:none!important}
+.fx{display:grid;grid-template-columns:1fr 54px 54px 1fr;gap:6px;align-items:center;margin:6px 0;font-size:15px}.fx input{margin:0;padding:8px 2px;text-align:center}.fx span:last-child{text-align:right}.fx.us{font-weight:800}.tabs{flex-wrap:wrap}.tabs button{font-size:15px;padding:12px 4px;flex:1 0 33.3%}.pr{display:grid;grid-template-columns:56px 1fr;gap:8px;align-items:center;background:var(--panel);padding:8px;margin:6px 0}.pr img{width:56px;height:56px;object-fit:cover;background:var(--line)}.pr .ctl{grid-column:1/-1;display:flex;gap:6px;align-items:center}.pr .ctl input[type=number]{margin:0;padding:9px 4px;text-align:center;width:90px}.btn{padding:11px 14px;border:2px solid var(--ink);font-weight:700;cursor:pointer;display:inline-block}.pr .ctl{flex-wrap:wrap}</style></head><body>
+<header>لوحة تحكم الاتحاد</header>
+<main>
+<section id="setup" hidden>
+<h2>الإعداد (مرة واحدة فقط)</h2>
+<p>لكي تنشر الأخبار من هنا نحتاج مفتاح وصول من GitHub يسمح بتعديل ملفات مشروع الفريق فقط.</p>
+<ol>
+<li>افتح <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">صفحة إنشاء المفتاح</a>.</li>
+<li>الاسم: <code>usmab</code> والمدة: سنة.</li>
+<li>Repository access ← <code>Only select repositories</code> ← اختر <code>usmab</code>.</li>
+<li>Permissions ← Repository permissions ← <code>Contents</code> ← <code>Read and write</code>.</li>
+<li>اضغط Generate token، انسخ المفتاح والصقه هنا:</li>
+</ol>
+<input id="tok" type="password" dir="ltr" placeholder="github_pat_..." autocomplete="off">
+<button id="saveTok">حفظ المفتاح</button>
+<p class="msg" id="setMsg"></p>
+<p><small>يُحفظ المفتاح في هذا الهاتف فقط. لا تشاركه مع أحد.</small></p>
+</section>
+
+<section id="panel" hidden>
+<div class="tabs"><button id="tN">الأخبار</button><button id="tL" class="alt">المباشر</button><button id="tR" class="alt">النتائج</button><button id="tI" class="alt">النادي</button><button id="tS" class="alt">اللاعبون</button><button id="tM" class="alt">تشكيلة المباراة</button><button id="tY" class="alt">الفئات الشبانية</button><button id="tT" class="alt">ترتيب U15</button></div>
+
+<div id="pN">
+<h2 id="fT">خبر جديد</h2>
+<label>التصنيف (كلمة قصيرة)</label><input id="fl" placeholder="مثال: Matchday أو انتدابات">
+<label>العنوان</label><input id="fh">
+<label>النص (كل سطر جديد يصبح فقرة)</label><textarea id="fb" rows="6"></textarea>
+<label>صورة (اختياري)</label><input id="ff" type="file" accept="image/*">
+<label>التاريخ</label><input id="fd" type="date">
+<div class="row"><button id="pub">نشر الخبر</button><button id="cancel" class="alt" hidden>إلغاء</button></div>
+<p class="msg" id="pm"></p>
+<h2>الأخبار المنشورة</h2>
+<div id="list"></div>
+</div>
+
+<div id="pL" hidden>
+<h2>النتيجة المباشرة</h2>
+<p id="lstat" class="msg"></p>
+<label>الفريق المنافس</label><input id="lo">
+<label>مكان المباراة</label><select id="lh"><option value="yes">داخل الديار</option><option value="no">خارج الديار</option></select>
+<div class="row"><div><label>نتيجة الاتحاد</label><input id="lu" type="number" min="0" value="0"></div><div><label>نتيجة الخصم</label><input id="lt" type="number" min="0" value="0"></div></div>
+<label>الوقت أو الحالة</label><input id="lmin" placeholder="مثال: 35' أو الاستراحة">
+<label>رابط البث المباشر على فيسبوك (اختياري)</label><input id="lvid" dir="ltr" placeholder="https://www.facebook.com/...">
+<div class="row"><button id="lgo">تحديث النتيجة (مباشر)</button><button id="loff" class="alt">إنهاء البث</button></div>
+<p class="msg" id="lmsg"></p>
+</div>
+
+<div id="pR" hidden>
+<h2>نتائج الجولات</h2>
+<div class="row"><button id="rp" class="alt">السابقة</button><b id="rn" style="text-align:center;align-self:center"></b><button id="rx" class="alt">التالية</button></div>
+<label>تاريخ الجولة (اختياري)</label><input id="rdt" type="date">
+<p><small>اكتب نتيجة كل مباراة. اترك الخانتين فارغتين إذا لم تُلعب المباراة بعد.</small></p>
+<div id="rl" dir="ltr"></div>
+<button id="rs">حفظ نتائج الجولة</button>
+<p class="msg" id="rmsg"></p>
+</div>
+
+<div id="pI" hidden>
+<h2>معلومات النادي</h2>
+<label>نبذة عن النادي</label><textarea id="ia" rows="5"></textarea>
+<label>اسم الملعب</label><input id="is">
+<label>كلمات البحث في الخريطة (اختياري)</label><input id="im" placeholder="مثال: ملعب منور معروف عين البيضاء">
+<label>أسعار التذاكر (سطر لكل فئة: الفئة | السعر)</label><textarea id="it" rows="4" placeholder="مدرجات عامة | ... دج"></textarea>
+<label>روابط رسمية (سطر لكل رابط: الاسم | الرابط)</label><textarea id="il" rows="4" dir="ltr"></textarea>
+<label>الرعاة (سطر لكل راع: الاسم | رابط اختياري)</label><textarea id="ip" rows="4"></textarea>
+<button id="isv">حفظ</button>
+<p class="msg" id="imsg"></p>
+</div>
+
+<div id="pS" hidden>
+<h2>اللاعبون</h2>
+<p><small>اكتب رقم القميص واضغط «صورة» لاختيار صورة اللاعب، ثم اضغط «حفظ اللاعبين».</small></p>
+<div id="sq"></div>
+<h2>إضافة لاعب</h2>
+<label>الاسم</label><input id="sn">
+<div class="row"><div><label>المركز</label><select id="sp"><option value="GK">حارس مرمى</option><option value="DEF">مدافع</option><option value="MID" selected>لاعب وسط</option><option value="FWD">مهاجم</option><option value="STF">الطاقم الفني</option></select></div><div><label>الرقم</label><input id="snum" type="number" min="0"></div></div>
+<label>المنصب (للطاقم الفني فقط)</label><input id="sr">
+<button id="sadd" class="alt">إضافة اللاعب</button>
+<p style="margin-top:14px"><button id="ssv">حفظ اللاعبين</button></p>
+<p class="msg" id="smsg"></p>
+</div>
+
+<div id="pM" hidden>
+<h2>تشكيلة المباراة</h2>
+<div class="row"><div><label>الجولة</label><input id="lr" type="number" min="1" max="30"></div><div><label>الخطة</label><select id="lf"><option>4-3-3</option><option>4-4-2</option><option>4-2-3-1</option><option>3-5-2</option><option>3-4-3</option><option>5-3-2</option><option>4-5-1</option></select></div></div>
+<div id="lx"></div>
+<label>المدرب</label><input id="lc">
+<h2>الاحتياط</h2>
+<div id="lsb"></div>
+<div class="row" style="margin-top:12px"><button id="lsv">نشر التشكيلة</button><button id="lcl" class="alt">إخفاء التشكيلة</button></div>
+<p class="msg" id="lmsg2"></p>
+</div>
+
+<div id="pY" hidden>
+<h2>الفئات الشبانية</h2>
+<label>الفئة</label><select id="yc"><option value="U15">أشبال U15</option><option value="U17">أشبال U17</option><option value="U20">أواسط U20</option></select>
+<label>المدرب</label><input id="yco">
+<h2>اللاعبون</h2>
+<div id="ypl"></div>
+<div class="row"><div><label>اسم اللاعب</label><input id="yn"></div><div><label>الرقم</label><input id="ynum" type="number" min="0"></div></div>
+<button id="yadd" class="alt">إضافة لاعب</button>
+<h2>المباريات والنتائج</h2>
+<div id="yml"></div>
+<label>الفريق المنافس</label><input id="ymo">
+<div class="row"><div><label>التاريخ</label><input id="ymd" type="date"></div><div><label>المكان</label><select id="ymh"><option value="1">داخل الديار</option><option value="0">خارج الديار</option></select></div></div>
+<div class="row"><div><label>نتيجتنا (اختياري)</label><input id="ymu" type="number" min="0"></div><div><label>نتيجة المنافس</label><input id="ymt" type="number" min="0"></div></div>
+<button id="ymadd" class="alt">إضافة مباراة</button>
+<p style="margin-top:14px"><button id="ysv">حفظ الفئة</button></p>
+<p class="msg" id="ymsg"></p>
+</div>
+
+<div id="pT" hidden>
+<h2>نتائج مجموعة أشبال U15</h2>
+<p><small>اكتب نتيجة كل مباريات الجولة (الخمس) ليتحدث الترتيب. اترك الخانتين فارغتين إذا لم تُلعب المباراة.</small></p>
+<div class="row"><button id="up" class="alt">السابقة</button><b id="un" style="text-align:center;align-self:center"></b><button id="ux" class="alt">التالية</button></div>
+<label>تاريخ الجولة (اختياري)</label><input id="udt" type="date">
+<div id="ul" dir="ltr"></div>
+<button id="usv">حفظ نتائج الجولة</button>
+<p class="msg" id="umsg"></p>
+</div>
+
+<p style="margin-top:30px"><button id="logout" class="alt">تسجيل الخروج</button></p>
+</section>
+</main>
+<script>
+const OWNER="ihebsoltani2013-gif",REPO="usmab",API="https://api.github.com/repos/"+OWNER+"/"+REPO+"/contents/";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const NM={IRBAA:"IRB A. Arnat",FCT:"FC Taher",MCBBS:"MCB B. Sakhra",EC:"E Collo",USMAB:"USMAB",IRBAL:"IRB A. Lahdjar",SCOR:"SC O. Rahmoune",ABCL:"AB C. Laid",JSMA:"JS Menzel Abtal",USORG:"USO R. Gare",NRBT:"NRB Teleghma",CRBKA:"CRB K. Abtal",CRAK:"CR A. Kebira",EBBS:"EB B. Sakhra",CRVM:"CR V. Moussa",ESAO:"ES A. Oualmane"};
+const R=[
+"IRBAA-FCT MCBBS-EC USMAB-IRBAL SCOR-ABCL JSMA-USORG NRBT-CRBKA CRAK-EBBS CRVM-ESAO",
+"EBBS-CRVM CRBKA-CRAK USORG-NRBT IRBAL-JSMA FCT-SCOR EC-USMAB IRBAA-MCBBS ABCL-ESAO",
+"MCBBS-FCT SCOR-EC NRBT-IRBAL JSMA-ABCL CRAK-USORG CRVM-CRBKA ESAO-EBBS USMAB-IRBAA",
+"USORG-CRVM IRBAL-CRAK FCT-NRBT EC-JSMA IRBAA-SCOR MCBBS-USMAB ABCL-EBBS CRBKA-ESAO",
+"USMAB-FCT NRBT-EC CRVM-IRBAL CRAK-ABCL ESAO-USORG EBBS-CRBKA SCOR-MCBBS JSMA-IRBAA",
+"ABCL-CRVM FCT-CRAK IRBAA-NRBT MCBBS-JSMA USMAB-SCOR EC-CRBKA USORG-EBBS IRBAL-ESAO",
+"CRVM-FCT CRAK-EC SCOR-IRBAL NRBT-ABCL CRBKA-USORG JSMA-USMAB EBBS-MCBBS ESAO-IRBAA",
+"IRBAA-CRVM MCBBS-CRAK USMAB-NRBT SCOR-JSMA EC-USORG ABCL-CRBKA IRBAL-EBBS FCT-ESAO",
+"JSMA-FCT EBBS-EC CRBKA-IRBAL USORG-ABCL NRBT-SCOR ESAO-USMAB CRVM-MCBBS CRAK-IRBAA",
+"USMAB-CRVM SCOR-CRAK JSMA-NRBT EC-ABCL IRBAL-USORG FCT-CRBKA IRBAA-EBBS MCBBS-ESAO",
+"EBBS-FCT CRVM-EC ABCL-IRBAL ESAO-JSMA USORG-SCOR CRAK-USMAB NRBT-MCBBS CRBKA-IRBAA",
+"JSMA-CRVM NRBT-CRAK EC-IRBAL FCT-ABCL IRBAA-USORG MCBBS-CRBKA USMAB-EBBS SCOR-ESAO",
+"IRBAL-FCT ESAO-EC CRVM-NRBT CRAK-JSMA EBBS-SCOR CRBKA-USMAB USORG-MCBBS ABCL-IRBAA",
+"CRAK-CRVM FCT-EC IRBAA-IRBAL MCBBS-ABCL USMAB-USORG SCOR-CRBKA JSMA-EBBS NRBT-ESAO",
+"USORG-FCT ESAO-CRAK EBBS-NRBT CRBKA-JSMA CRVM-SCOR ABCL-USMAB IRBAL-MCBBS EC-IRBAA"];
+const base=R.map(r=>r.split(" ").map(x=>x.split("-")));const all=[...base,...base.map(r=>r.map(([a,b])=>[b,a]))];
+const RHEAD="# results: round number, then eight results in fixture order (x = not played), @date = round date\n";
+const HEAD="# USMAB news. Newest post first. Managed from admin.html\n\n";
+const parse=t=>t.split(/^[ \t]*---[ \t]*$/m).map(b=>{const o={};let k=null;b.trim().split(/\r?\n/).forEach(l=>{const m=l.match(/^(label|title|text|image|date):[ \t]*(.*)$/i);if(m){k=m[1].toLowerCase();o[k]=m[2].trim()}else if(k&&l.trim())o[k]+="\n"+l.trim()});return o}).filter(o=>o.title);
+const ser=ps=>HEAD+ps.map(o=>"label: "+(o.label||"News")+"\ntitle: "+o.title+"\ntext: "+(o.text||"").trim()+"\nimage: "+(o.image||"")+"\ndate: "+(o.date||"")).join("\n---\n")+"\n";
+const dec=b=>new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\s/g,"")),c=>c.charCodeAt(0)));
+const b64=u8=>{let s="";u8.forEach(c=>s+=String.fromCharCode(c));return btoa(s)};
+const enc=t=>b64(new TextEncoder().encode(t));
+let tok="",posts=[],sha=null,lsha=null,edit=-1;
+try{tok=localStorage.getItem("usmab_tok")||""}catch(e){}
+const msg=(id,t,bad)=>{const e=$(id);e.textContent=t;e.className="msg"+(bad?" err":"")};
+async function gh(path,opt={}){
+  const r=await fetch(API+path,{...opt,cache:"no-store",headers:{Authorization:"Bearer "+tok,Accept:"application/vnd.github+json","Content-Type":"application/json"}});
+  const get=!opt.method||opt.method=="GET";
+  if(r.status==404&&get)return null;
+  if(!r.ok)throw new Error(r.status==401?"المفتاح غير صالح أو منتهي":r.status==403?"المفتاح لا يملك صلاحية الكتابة":r.status==404?"لم أجد المشروع، تأكد من اختيار usmab":r.status==409||r.status==422?"تعارض أثناء الحفظ، أعد فتح الصفحة وحاول مجددا":"خطأ "+r.status);
+  return r.json();
+}
+const run=async(fn,out)=>{try{await fn()}catch(x){msg(out,x.message||"حدث خطأ",1);try{await loadNews();render()}catch(e){}}};
+async function loadNews(){const r=await gh("news.txt");if(r){sha=r.sha;posts=parse(dec(r.content))}else{sha=null;posts=[]}}
+async function change(fn,m){fn();const r=await gh("news.txt",{method:"PUT",body:JSON.stringify({message:m,content:enc(ser(posts)),...(sha?{sha}:{})})});sha=r.content.sha}
+function render(){$("list").innerHTML=posts.map((p,i)=>'<div class="card"><b>'+esc(p.title)+'</b><small>'+esc(p.label||"")+' '+esc(p.date||"")+'</small><div class="row" style="margin-top:8px"><button class="alt" data-e="'+i+'">تعديل</button><button class="alt" data-d="'+i+'">حذف</button></div></div>').join("")||"<p>لا توجد أخبار بعد.</p>"}
+function reset(){edit=-1;["fl","fh","fb","ff"].forEach(i=>$(i).value="");$("fT").textContent="خبر جديد";$("pub").textContent="نشر الخبر";$("cancel").hidden=true}
+const shrink=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const w=Math.min(900,im.width),c=document.createElement("canvas");c.width=w;c.height=Math.round(im.height*w/im.width);c.getContext("2d").drawImage(im,0,0,c.width,c.height);c.toBlob(x=>x?ok(x):no(new Error("الصورة غير صالحة")),"image/jpeg",.82)};im.onerror=()=>no(new Error("الصورة غير صالحة"));im.src=r.result};r.onerror=()=>no(new Error("الصورة غير صالحة"));r.readAsDataURL(f)});
+async function upImg(f){const u8=new Uint8Array(await(await shrink(f)).arrayBuffer());const name="photos/"+Date.now()+".jpg";await gh(name,{method:"PUT",body:JSON.stringify({message:"Add photo",content:b64(u8)})});return name}
+$("pub").onclick=()=>run(async()=>{
+  const h=$("fh").value.trim();if(!h){msg("pm","اكتب عنوان الخبر أولا",1);return}
+  $("pub").disabled=true;msg("pm","جار النشر...");
+  let img=edit>=0?(posts[edit].image||""):"";const f=$("ff").files[0];if(f)img=await upImg(f);
+  const p={label:$("fl").value.trim()||"News",title:h,text:$("fb").value.trim(),image:img,date:$("fd").value};
+  const was=edit>=0;
+  await change(()=>{if(was)posts[edit]=p;else posts.unshift(p)},was?"Edit news":"Add news");
+  reset();render();msg("pm","تم النشر ✓ سيظهر في التطبيق بعد دقيقة أو دقيقتين.");
+},"pm").finally(()=>{$("pub").disabled=false});
+$("cancel").onclick=reset;
+$("list").onclick=e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.e!=null){edit=+b.dataset.e;const p=posts[edit];$("fl").value=p.label||"";$("fh").value=p.title;$("fb").value=p.text||"";$("fd").value=p.date||"";$("fT").textContent="تعديل الخبر";$("pub").textContent="حفظ التعديل";$("cancel").hidden=false;scrollTo(0,0)}
+  else if(b.dataset.d!=null){if(!b.dataset.s){b.dataset.s=1;b.textContent="اضغط مرة أخرى للحذف";return}
+    run(async()=>{msg("pm","جار الحذف...");await change(()=>{posts.splice(+b.dataset.d,1)},"Delete news");reset();render();msg("pm","تم الحذف ✓")},"pm")}};
+async function loadLive(){const r=await gh("live.txt");lsha=r?r.sha:null;const o={};if(r)dec(r.content).split(/\r?\n/).forEach(l=>{const m=l.match(/^(\w+):\s*(.*)$/);if(m)o[m[1].toLowerCase()]=m[2].trim()});
+  $("lo").value=o.opponent||"";$("lh").value=o.home=="no"?"no":"yes";$("lu").value=o.us||0;$("lt").value=o.them||0;$("lmin").value=o.minute||"";$("lvid").value=o.video||"";$("lstat").textContent=o.status=="live"?"البث المباشر: يعمل الآن":"البث المباشر: متوقف"}
+async function putLive(st){const t=["status: "+st,"opponent: "+$("lo").value.trim(),"home: "+$("lh").value,"us: "+($("lu").value||0),"them: "+($("lt").value||0),"minute: "+$("lmin").value.trim(),"video: "+$("lvid").value.trim()].join("\n")+"\n";
+  const r=await gh("live.txt",{method:"PUT",body:JSON.stringify({message:"Live score",content:enc(t),...(lsha?{sha:lsha}:{})})});lsha=r.content.sha;$("lstat").textContent=st=="live"?"البث المباشر: يعمل الآن":"البث المباشر: متوقف"}
+$("lgo").onclick=()=>run(async()=>{if(!$("lo").value.trim()){msg("lmsg","اكتب اسم الفريق المنافس",1);return}msg("lmsg","جار التحديث...");await putLive("live");msg("lmsg","تم التحديث ✓ يظهر في التطبيق خلال دقيقة تقريبا.")},"lmsg");
+$("loff").onclick=()=>run(async()=>{msg("lmsg","جار الإنهاء...");await putLive("off");msg("lmsg","تم إنهاء البث ✓")},"lmsg");
+let res={},rd={},rsha=null,rr=1;
+async function loadRes(){const r=await gh("results.txt");rsha=r?r.sha:null;res={};rd={};if(r)dec(r.content).split(/\r?\n/).forEach(l=>{const m=l.match(/^\s*(\d+)\s*:\s*(.*)$/);if(m){const k=m[2].trim().split(/\s+/);res[+m[1]]=k.filter(x=>x[0]!="@");const d=k.find(x=>x[0]=="@");if(d)rd[+m[1]]=d.slice(1)}});showRound()}
+function showRound(){$("rn").textContent="الجولة "+rr;$("rdt").value=rd[rr]||"";const k=res[rr]||[];$("rl").innerHTML=all[rr-1].map(([a,b],i)=>{const m=(k[i]||"").match(/^(\d+)-(\d+)$/);return '<div class="fx'+(a=="USMAB"||b=="USMAB"?" us":"")+'"><span>'+NM[a]+'</span><input type="number" min="0" id="ha'+i+'" value="'+(m?m[1]:"")+'"><input type="number" min="0" id="hb'+i+'" value="'+(m?m[2]:"")+'"><span>'+NM[b]+'</span></div>'}).join("")}
+function resText(){const u=[...new Set(Object.keys(res).concat(Object.keys(rd)).map(Number))].sort((a,b)=>a-b);return RHEAD+u.map(n=>n+": "+(res[n]||Array(8).fill("x")).join(" ")+(rd[n]?" @"+rd[n]:"")).join("\n")+"\n"}
+$("rp").onclick=()=>{rr=Math.max(1,rr-1);showRound()};$("rx").onclick=()=>{rr=Math.min(30,rr+1);showRound()};
+$("rs").onclick=()=>run(async()=>{const k=all[rr-1].map((_,i)=>{const a=$("ha"+i).value.trim(),b=$("hb"+i).value.trim();return a!==""&&b!==""?(+a)+"-"+(+b):"x"});
+  if(k.every(x=>x=="x"))delete res[rr];else res[rr]=k;const d=$("rdt").value;if(d)rd[rr]=d;else delete rd[rr];
+  msg("rmsg","جار الحفظ...");const r=await gh("results.txt",{method:"PUT",body:JSON.stringify({message:"Results round "+rr,content:enc(resText()),...(rsha?{sha:rsha}:{})})});rsha=r.content.sha;
+  msg("rmsg","تم الحفظ ✓ يتحدث الترتيب في التطبيق خلال دقيقة تقريبا.")},"rmsg");
+let isha=null;
+async function loadInfo(){const r=await gh("info.json");isha=r?r.sha:null;let o={};try{o=r?JSON.parse(dec(r.content)):{}}catch(e){}
+$("ia").value=o.about||"";$("is").value=o.stadium||"ملعب منور معروف";$("im").value=o.mapq||"";$("it").value=(o.tickets||[]).join("\n");$("il").value=(o.links||["فيسبوك | https://www.facebook.com/share/1DsPQa1uyG/"]).join("\n");$("ip").value=(o.sponsors||[]).join("\n")}
+$("isv").onclick=()=>run(async()=>{const Ls=id=>$(id).value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);const o={about:$("ia").value.trim(),stadium:$("is").value.trim(),mapq:$("im").value.trim(),tickets:Ls("it"),links:Ls("il"),sponsors:Ls("ip")};
+msg("imsg","جار الحفظ...");const r=await gh("info.json",{method:"PUT",body:JSON.stringify({message:"Club info",content:enc(JSON.stringify(o,null,1)),...(isha?{sha:isha}:{})})});isha=r.content.sha;msg("imsg","تم الحفظ ✓ يظهر في تبويب النادي خلال دقيقة تقريبا.")},"imsg");
+const P0=[["أسامة غطوط","GK"],["صالح بن حيزية","GK"],["عبد الحميد بن سيدهم","GK"],
+["ياسر طايبي","DEF"],["هيثم عياش","DEF"],["رسيم بورياح","DEF"],["خالد فوضيلي","DEF"],["عبد الرؤوف حملاوي","DEF"],["زين الدين عتروس","DEF"],["أنيس بومعراف","DEF"],["فادي بومعراف","DEF"],
+["مصطفى وطار","MID"],["عبد الرؤوف كحيل","MID"],["إسلام فزاني","MID"],["أشرف بلخير","MID"],["مهدي هوشي","MID"],["آدم العلواني","MID"],["سامي شهبة","MID"],["عبد الرؤوف علويط","MID"],
+["عبد الله طرفاية","FWD"],["هيثم تبني","FWD"],["يونس بلقاضي","FWD"],["أسامة بلغربي","FWD"],["أكرم قميني","FWD"],["منصف العلواني","FWD"],["أيوب كواشي","FWD"],["يوسف بورصاص","FWD"],["ياسر غطوط","FWD"],
+["نور الدين طلبة","STF","Head coach"],["زين الدين بلونيسي","STF","Assistant coach"],["محرز معروف","STF","Goalkeeper coach"],["الطاهر زرارة","STF","Team nurse"]];
+const POSL={GK:"حارس مرمى",DEF:"مدافع",MID:"لاعب وسط",FWD:"مهاجم",STF:"الطاقم الفني"};
+const BLANK="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+let sq=[],ssha=null;
+async function loadSq(){const r=await gh("squad.json");ssha=r?r.sha:null;let o=null;try{o=r?JSON.parse(dec(r.content)):null}catch(e){}sq=Array.isArray(o)&&o.length?o:P0.map(x=>({n:x[0],p:x[1],r:x[2]||"",num:"",img:""}));drawSq()}
+function drawSq(){$("sq").innerHTML=sq.map((p,i)=>'<div class="pr"><img src="'+esc(p._v||p.img||BLANK)+'" alt=""><div><b>'+esc(p.n)+'</b><br><small>'+(POSL[p.p]||esc(p.p))+(p.r?" - "+esc(p.r):"")+'</small></div><div class="ctl"><input type="number" min="0" placeholder="الرقم" data-n="'+i+'" value="'+esc(p.num||"")+'"><label class="btn">صورة<input type="file" accept="image/*" data-pi="'+i+'" hidden></label><button class="alt" data-x="'+i+'">حذف</button></div></div>').join("")}
+const shrinkSq=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const side=Math.min(im.width,im.height),sx=(im.width-side)/2,sy=(im.height-side)*.2,c=document.createElement("canvas");c.width=c.height=480;c.getContext("2d").drawImage(im,sx,sy,side,side,0,0,480,480);c.toBlob(x=>x?ok(x):no(new Error("الصورة غير صالحة")),"image/jpeg",.82)};im.onerror=()=>no(new Error("الصورة غير صالحة"));im.src=r.result};r.onerror=()=>no(new Error("الصورة غير صالحة"));r.readAsDataURL(f)});
+const blobURL=b=>new Promise(ok=>{const r=new FileReader();r.onload=()=>ok(r.result);r.readAsDataURL(b)});
+$("sq").oninput=e=>{const i=e.target.dataset.n;if(i!=null)sq[+i].num=e.target.value.trim()};
+$("sq").onchange=e=>{const i=e.target.dataset.pi,f=e.target.files&&e.target.files[0];if(i==null||!f)return;run(async()=>{msg("smsg","جار رفع الصورة...");const b=await shrinkSq(f),u8=new Uint8Array(await b.arrayBuffer()),name="photos/p"+Date.now()+".jpg";await gh(name,{method:"PUT",body:JSON.stringify({message:"Player photo",content:b64(u8)})});sq[+i].img=name;sq[+i]._v=await blobURL(b);drawSq();msg("smsg","تم رفع الصورة ✓ اضغط «حفظ اللاعبين» لتظهر في التطبيق.")},"smsg")};
+$("sq").onclick=e=>{const b=e.target.closest("[data-x]");if(!b)return;if(!b.dataset.s){b.dataset.s=1;b.textContent="اضغط مرة أخرى";return}sq.splice(+b.dataset.x,1);drawSq();msg("smsg","حُذف اللاعب. اضغط «حفظ اللاعبين» لتأكيد التغيير.")};
+$("sadd").onclick=()=>{const n=$("sn").value.trim();if(!n){msg("smsg","اكتب اسم اللاعب",1);return}sq.push({n,p:$("sp").value,r:$("sr").value.trim(),num:$("snum").value.trim(),img:""});["sn","sr","snum"].forEach(i=>$(i).value="");drawSq();msg("smsg","أضيف اللاعب ✓ اضغط «حفظ اللاعبين».")};
+$("ssv").onclick=()=>run(async()=>{msg("smsg","جار الحفظ...");const o=sq.map(({n,p,r,num,img})=>({n,p,r,num,img})),r=await gh("squad.json",{method:"PUT",body:JSON.stringify({message:"Squad",content:enc(JSON.stringify(o,null,1)),...(ssha?{sha:ssha}:{})})});ssha=r.content.sha;msg("smsg","تم الحفظ ✓ يظهر في التطبيق خلال دقيقة تقريبا.")},"smsg");
+let msha=null,lsel=Array(11).fill(""),lsubs=new Set();
+const rowName=(k,i)=>k==3?["الدفاع","الوسط","الهجوم"][i]:k==4?["الدفاع","الوسط","الوسط الهجومي","الهجوم"][i]:"الخط "+(i+1);
+function openRound(){for(let n=1;n<=30;n++){const i=all[n-1].findIndex(p=>p.includes("USMAB")),tk=(res[n]||[])[i];if(!tk||tk=="x")return n}return 30}
+function drawLu(){const rows=$("lf").value.split("-").map(Number),pl=sq.map((p,i)=>[p,i]).filter(x=>x[0].p!="STF");
+const opts='<option value="">— اختر —</option>'+pl.map(([p,i])=>'<option value="'+i+'">'+esc(p.n)+(p.num?" ("+esc(p.num)+")":"")+'</option>').join("");
+let h='<label>حارس المرمى</label><select data-s="0">'+opts+'</select>',k=1;
+rows.forEach((n,ri)=>{h+='<label>'+rowName(rows.length,ri)+'</label><div class="row" style="flex-wrap:wrap">';for(let j=0;j<n;j++){h+='<select data-s="'+k+'" style="flex:1 0 45%">'+opts+'</select>';k++}h+='</div>'});
+$("lx").innerHTML=h;$("lx").querySelectorAll("select").forEach(x=>{x.value=lsel[+x.dataset.s]||""});
+$("lsb").innerHTML=pl.map(([p,i])=>'<label style="display:block;font-weight:400"><input type="checkbox" data-b="'+i+'" style="width:auto;margin:0 0 0 8px"'+(lsubs.has(i)?" checked":"")+'> '+esc(p.n)+'</label>').join("")}
+$("lx").onchange=e=>{const s=e.target.dataset.s;if(s!=null)lsel[+s]=e.target.value};
+$("lsb").onchange=e=>{const b=e.target.dataset.b;if(b!=null){if(e.target.checked)lsubs.add(+b);else lsubs.delete(+b)}};
+$("lf").onchange=drawLu;
+async function loadLineup(){const r=await gh("lineup.json");msha=r?r.sha:null;let o={};try{o=r?JSON.parse(dec(r.content)):{}}catch(e){}
+$("lr").value=o.round||openRound();if(o.formation&&[...$("lf").options].some(x=>x.text==o.formation))$("lf").value=o.formation;
+$("lc").value=o.coach||(sq.find(p=>p.p=="STF"&&/head/i.test(p.r||""))||{}).n||"";
+const idx=n=>sq.findIndex(p=>p.n==n);lsel=Array(11).fill("");(o.xi||[]).forEach((x,k)=>{const i=idx(x.n);if(i>=0&&k<11)lsel[k]=String(i)});lsubs=new Set((o.subs||[]).map(x=>idx(x.n)).filter(i=>i>=0));drawLu()}
+async function putLu(o){const r=await gh("lineup.json",{method:"PUT",body:JSON.stringify({message:"Lineup",content:enc(JSON.stringify(o,null,1)),...(msha?{sha:msha}:{})})});msha=r.content.sha}
+$("lsv").onclick=()=>run(async()=>{const ix=lsel.map(v=>v===""?-1:+v);if(ix.some(i=>i<0)||new Set(ix).size!=11){msg("lmsg2","اختر 11 لاعبا مختلفا لخانات التشكيلة",1);return}
+const pk=i=>{const p=sq[i];return{n:p.n,num:p.num||"",p:p.p,img:p.img||""}};
+const o={round:+$("lr").value||1,formation:$("lf").value,xi:ix.map(pk),subs:[...lsubs].filter(i=>!ix.includes(i)).map(pk),coach:$("lc").value.trim()};
+msg("lmsg2","جار النشر...");await putLu(o);msg("lmsg2","تم النشر ✓ تظهر التشكيلة في الصفحة الرئيسية خلال دقيقة تقريبا.")},"lmsg2");
+$("lcl").onclick=()=>run(async()=>{msg("lmsg2","جار الإخفاء...");await putLu({});msg("lmsg2","تم إخفاء التشكيلة ✓")},"lmsg2");
+let yt={},ysha=null,yc="U15";
+const DEFM={U15:[{"r":1,"o":"NRBHT","h":0,"d":"","us":"","th":""},{"r":2,"o":"CRBBB","h":1,"d":"","us":"","th":""},{"r":3,"o":"SCOR","h":0,"d":"","us":"","th":""},{"r":4,"o":"CSSN","h":1,"d":"","us":"","th":""},{"r":5,"o":"RBOG","h":0,"d":"","us":"","th":""},{"r":6,"o":"CRBAA","h":0,"d":"","us":"","th":""},{"r":7,"o":"USORG","h":1,"d":"","us":"","th":""},{"r":8,"o":"IRBM","h":0,"d":"","us":"","th":""},{"r":9,"o":"CRBH","h":1,"d":"","us":"","th":""},{"r":10,"o":"NRBHT","h":1,"d":"","us":"","th":""},{"r":11,"o":"CRBBB","h":0,"d":"","us":"","th":""},{"r":12,"o":"SCOR","h":1,"d":"","us":"","th":""},{"r":13,"o":"CSSN","h":0,"d":"","us":"","th":""},{"r":14,"o":"RBOG","h":1,"d":"","us":"","th":""},{"r":15,"o":"CRBAA","h":1,"d":"","us":"","th":""},{"r":16,"o":"USORG","h":0,"d":"","us":"","th":""},{"r":17,"o":"IRBM","h":1,"d":"","us":"","th":""},{"r":18,"o":"CRBH","h":0,"d":"","us":"","th":""}]};
+const Yd=()=>(yt[yc]=yt[yc]||{coach:"",squad:[]});
+async function loadYt(){const r=await gh("youth.json");ysha=r?r.sha:null;try{yt=r?JSON.parse(dec(r.content)):{}}catch(e){yt={}}drawY()}
+function drawY(){const Y=Yd();Y.squad=Y.squad||[];if(!Array.isArray(Y.matches))Y.matches=(DEFM[yc]||[]).map(x=>({...x}));$("yco").value=Y.coach||"";
+$("ypl").innerHTML=Y.squad.map((p,i)=>'<div class="pr"><img src="'+esc(p._v||p.img||BLANK)+'" alt=""><div><b>'+esc(p.n)+'</b></div><div class="ctl"><input type="number" min="0" placeholder="الرقم" data-yn="'+i+'" value="'+esc(p.num||"")+'"><label class="btn">صورة<input type="file" accept="image/*" data-ypi="'+i+'" hidden></label><button class="alt" data-yx="'+i+'">حذف</button></div></div>').join("")||"<p><small>لا يوجد لاعبون بعد.</small></p>";
+$("yml").innerHTML=Y.matches.map((m,i)=>'<div class="pr"><div></div><div><b>'+esc((m.r?"الجولة "+m.r+" - ":"")+(m.d||"بلا تاريخ"))+'</b><br><small>'+(m.h?"داخل الديار":"خارج الديار")+" ضد "+esc(m.o)+'</small></div><div class="ctl"><input type="date" style="flex:1 0 100%;margin:0" data-ys="'+i+'" data-w="d" value="'+esc(m.d||"")+'"><input type="number" min="0" placeholder="لنا" data-ys="'+i+'" data-w="us" value="'+esc(m.us==null?"":m.us)+'"><input type="number" min="0" placeholder="لهم" data-ys="'+i+'" data-w="th" value="'+esc(m.th==null?"":m.th)+'"><button class="alt" data-ymx="'+i+'">حذف</button></div></div>').join("")||"<p><small>لا توجد مباريات بعد.</small></p>"}
+$("yc").onchange=()=>{yc=$("yc").value;drawY()};
+$("yco").oninput=()=>{Yd().coach=$("yco").value};
+$("ypl").oninput=e=>{const i=e.target.dataset.yn;if(i!=null)Yd().squad[+i].num=e.target.value.trim()};
+$("ypl").onchange=e=>{const i=e.target.dataset.ypi,f=e.target.files&&e.target.files[0];if(i==null||!f)return;run(async()=>{msg("ymsg","جار رفع الصورة...");const b=await shrinkSq(f),u8=new Uint8Array(await b.arrayBuffer()),name="photos/y"+Date.now()+".jpg";await gh(name,{method:"PUT",body:JSON.stringify({message:"Youth player photo",content:b64(u8)})});const p=Yd().squad[+i];p.img=name;p._v=await blobURL(b);drawY();msg("ymsg","تم رفع الصورة ✓ اضغط «حفظ الفئة» لتظهر في التطبيق.")},"ymsg")};
+$("ypl").onclick=e=>{const b=e.target.closest("[data-yx]");if(!b)return;if(!b.dataset.s){b.dataset.s=1;b.textContent="اضغط مرة أخرى";return}Yd().squad.splice(+b.dataset.yx,1);drawY()};
+$("yml").oninput=e=>{const i=e.target.dataset.ys;if(i!=null)Yd().matches[+i][e.target.dataset.w]=e.target.value.trim()};
+$("yml").onclick=e=>{const b=e.target.closest("[data-ymx]");if(!b)return;if(!b.dataset.s){b.dataset.s=1;b.textContent="اضغط مرة أخرى";return}Yd().matches.splice(+b.dataset.ymx,1);drawY()};
+$("yadd").onclick=()=>{const n=$("yn").value.trim();if(!n){msg("ymsg","اكتب اسم اللاعب",1);return}Yd().squad.push({n,p:"MID",num:$("ynum").value.trim(),img:""});$("yn").value="";$("ynum").value="";drawY();msg("ymsg","أضيف اللاعب ✓ اضغط «حفظ الفئة».")};
+$("ymadd").onclick=()=>{const o=$("ymo").value.trim();if(!o){msg("ymsg","اكتب اسم الفريق المنافس",1);return}Yd().matches.push({d:$("ymd").value,o,h:+$("ymh").value,us:$("ymu").value.trim(),th:$("ymt").value.trim()});["ymo","ymd","ymu","ymt"].forEach(i=>$(i).value="");drawY();msg("ymsg","أضيفت المباراة ✓ اضغط «حفظ الفئة».")};
+$("ysv").onclick=()=>run(async()=>{msg("ymsg","جار الحفظ...");const o={};Object.keys(yt).forEach(k=>{const Y=yt[k];o[k]={coach:(Y.coach||"").trim(),squad:(Y.squad||[]).map(({n,p,num,img})=>({n,p:p||"MID",num:num||"",img:img||""})),matches:(Y.matches||[]).map(({r,d,o:op,h,us,th})=>({r:r||0,d:d||"",o:op,h:h?1:0,us:us==null?"":us,th:th==null?"":th}))}});
+const r=await gh("youth.json",{method:"PUT",body:JSON.stringify({message:"Youth categories",content:enc(JSON.stringify(o,null,1)),...(ysha?{sha:ysha}:{})})});ysha=r.content.sha;msg("ymsg","تم الحفظ ✓ يظهر في التطبيق خلال دقيقة تقريبا.")},"ymsg");
+const U15G=["SCOR-RBOG CRBBB-CSSN NRBHT-USMAB CRBH-CRBAA IRBM-USORG","CSSN-SCOR USMAB-CRBBB CRBAA-NRBHT USORG-CRBH RBOG-IRBM","SCOR-USMAB CRBBB-CRBAA NRBHT-USORG CRBH-IRBM RBOG-CSSN","CRBAA-SCOR USORG-CRBBB IRBM-NRBHT CRBH-RBOG USMAB-CSSN","SCOR-USORG CRBBB-IRBM NRBHT-CRBH CSSN-CRBAA RBOG-USMAB","IRBM-SCOR CRBH-CRBBB NRBHT-RBOG USORG-CSSN CRBAA-USMAB","SCOR-CRBH CRBBB-NRBHT CSSN-IRBM USMAB-USORG RBOG-CRBAA","NRBHT-SCOR CRBBB-RBOG CRBH-CSSN IRBM-USMAB USORG-CRBAA","SCOR-CRBBB CSSN-NRBHT USMAB-CRBH CRBAA-IRBM RBOG-USORG"].map(r=>r.split(" ").map(x=>x.split("-")));
+const U15R=[...U15G,...U15G.map(r=>r.map(([a,b])=>[b,a]))];
+let ures={},urd={},usha=null,ur=1;
+const URH="# u15 group C results: round number, then five results in fixture order (x = not played), @date = round date\n";
+async function loadUres(){const r=await gh("u15res.txt");usha=r?r.sha:null;ures={};urd={};if(r)dec(r.content).split(/\r?\n/).forEach(l=>{const m=l.match(/^\s*(\d+)\s*:\s*(.*)$/);if(m){const k=m[2].trim().split(/\s+/);ures[+m[1]]=k.filter(x=>x[0]!="@");const d=k.find(x=>x[0]=="@");if(d)urd[+m[1]]=d.slice(1)}});showUr()}
+function showUr(){$("un").textContent="الجولة "+ur;$("udt").value=urd[ur]||"";const k=ures[ur]||[];$("ul").innerHTML=U15R[ur-1].map(([a,b],i)=>{const m=(k[i]||"").match(/^(\d+)-(\d+)$/);return '<div class="fx'+(a=="USMAB"||b=="USMAB"?" us":"")+'"><span>'+a+'</span><input type="number" min="0" id="ua'+i+'" value="'+(m?m[1]:"")+'"><input type="number" min="0" id="ub'+i+'" value="'+(m?m[2]:"")+'"><span>'+b+'</span></div>'}).join("")}
+function uresText(){const u=[...new Set(Object.keys(ures).concat(Object.keys(urd)).map(Number))].sort((a,b)=>a-b);return URH+u.map(n=>n+": "+(ures[n]||Array(5).fill("x")).join(" ")+(urd[n]?" @"+urd[n]:"")).join("\n")+"\n"}
+$("up").onclick=()=>{ur=Math.max(1,ur-1);showUr()};$("ux").onclick=()=>{ur=Math.min(18,ur+1);showUr()};
+$("usv").onclick=()=>run(async()=>{const k=U15R[ur-1].map((_,i)=>{const x=$("ua"+i).value.trim(),y=$("ub"+i).value.trim();return x!==""&&y!==""?(+x)+"-"+(+y):"x"});
+if(k.every(v=>v=="x"))delete ures[ur];else ures[ur]=k;const d=$("udt").value;if(d)urd[ur]=d;else delete urd[ur];
+msg("umsg","جار الحفظ...");const r=await gh("u15res.txt",{method:"PUT",body:JSON.stringify({message:"U15 results round "+ur,content:enc(uresText()),...(usha?{sha:usha}:{})})});usha=r.content.sha;
+msg("umsg","تم الحفظ ✓ يتحدث الترتيب في التطبيق خلال دقيقة تقريبا.")},"umsg");
+const tab=n=>["N","L","R","I","S","M","Y","T"].forEach((k,i)=>{$("p"+k).hidden=i!=n;$("t"+k).className=i==n?"":"alt"});
+$("tN").onclick=()=>tab(0);$("tL").onclick=()=>tab(1);$("tR").onclick=()=>tab(2);$("tI").onclick=()=>tab(3);$("tS").onclick=()=>tab(4);$("tM").onclick=()=>{tab(5);drawLu()};$("tY").onclick=()=>tab(6);$("tT").onclick=()=>tab(7);
+$("saveTok").onclick=()=>{const v=$("tok").value.trim();if(!v){msg("setMsg","الصق المفتاح أولا",1);return}tok=v;gh("news.txt").then(()=>{try{localStorage.setItem("usmab_tok",v)}catch(e){}show()}).catch(x=>{tok="";msg("setMsg",x.message,1)})};
+$("logout").onclick=()=>{try{localStorage.removeItem("usmab_tok")}catch(e){}tok="";location.reload()};
+function show(){$("setup").hidden=!!tok;$("panel").hidden=!tok;if(tok){$("fd").value=new Date().toISOString().slice(0,10);run(async()=>{await loadNews();render();await loadLive();await loadRes();await loadInfo();await loadSq();await loadLineup();await loadYt();await loadUres()},"pm")}}
+show();
+</script></body></html>
