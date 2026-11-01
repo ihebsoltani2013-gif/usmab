@@ -1,4 +1,4 @@
 # u15 group C results: round number, then five results in fixture order (x = not played), @date = round date
 1: x x 0-3 x 0-10
-2: x 5-1 x x x
+2: x 5-1 x 7-0 x
 3: 0-5 x x x x
